@@ -13,7 +13,7 @@ Everything runs directly on your computer: cryptographic keys, a local-first SQL
 - **Local-First & Ephemeral:** Your posts and private key are stored securely on your machine (`~/.murmur/`). Ephemeral mode (`--ephemeral`) allows running entirely in-memory.
 - **Privacy-Coarsened Location:** Leverages the Uber H3 spatial index to group users within a ~1km, ~3km, or ~10km radius grid. Your exact GPS coordinates never leave your machine.
 - **Zero Configuration TUI:** An interactive terminal interface designed with glassmorphic aesthetics, featuring a real-time feed, nearby peer listing, system console logs, and active status indicators.
-- **Auto Tunneling (P2P Over NAT):** Automatically spawns a Cloudflare Quick Tunnel to expose your local feed endpoint externally, bypass firewalls/NATs, and share your feed with peers.
+- **Auto Tunneling (P2P Over NAT):** Automatically establishes a secure connection tunnel to expose your local feed endpoint externally, bypass firewalls/NATs, and share your feed with peers.
 - **Mainline DHT Discovery:** Bootstraps peer discovery using the BitTorrent Mainline DHT, matching peers located inside matching geographic H3 grids.
 - **Rayon-Parallel Validation:** Pulls peers' feeds asynchronously, validating cryptographic signatures using a Rayon thread pool for high performance.
 - **Interactive Vibe Reactions:** React to updates from other peers with local aggregate emoji vibes.
@@ -38,9 +38,9 @@ Everything runs directly on your computer: cryptographic keys, a local-first SQL
    ```bash
    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
    ```
-2. **cloudflared:** Required to expose your feed to the network:
+2. **Tunneling Daemon (cloudflared):** Required to expose your feed to the network:
    - **macOS:** `brew install cloudflared`
-   - **Linux:** Install via your package manager or directly from [Cloudflare](https://github.com/cloudflare/cloudflared).
+   - **Linux:** Install via your standard package manager.
 
 #### Build & Run
 Clone the repository and run:
@@ -56,8 +56,8 @@ cargo run --release
 
 When you launch `murmur`, it will:
 1. Load or generate a secure Ed25519 identity keypair (`~/.murmur/identity.key`).
-2. Resolve your general location via a IP-API lookup (which is coarsened immediately to a H3 grid cell).
-3. Start the local server (`127.0.0.1:3731`), launch a Cloudflare Tunnel, and begin peer discovery over the DHT.
+2. Resolve your approximate starting location (which is coarsened immediately to a H3 grid cell).
+3. Start the local server (`127.0.0.1:3731`), initialize the connection tunnel, and begin peer discovery over the DHT.
 
 ### Keyboard Shortcuts
 - `Tab` / `Shift+Tab` – Switch focus between the Feed, Peers, and Command Bar.
@@ -73,7 +73,7 @@ Press `:` to focus the command input router at the bottom of the screen. The fol
 | `:post <text>` | Publish a new status update (max 280 chars, URLs auto-stripped) | `:post sipping coffee in Kathmandu ☕` |
 | `:vibe <post_id> <emoji>` | React to a post with an emoji vibe | `:vibe <uuid> 🔥` |
 | `:radius` | Cycle discovery resolution step (~1km, ~3km, ~10km radius) | `:radius` |
-| `:peer add <url>` | Manually connect to a specific peer's tunnel URL | `:peer add https://xyz.trycloudflare.com` |
+| `:peer add <url>` | Manually connect to a specific peer's tunnel URL | `:peer add http://peer-tunnel-id.example.com` |
 | `:ttl <hours>` | Set lifetime (TTL) for your next posts | `:ttl 12` |
 | `:dht status` | Print current DHT routing table and network status | `:dht status` |
 
@@ -96,8 +96,8 @@ Press `:` to focus the command input router at the bottom of the screen. The fol
          │                           │                           │
          ▼                           ▼                           ▼
 ┌─────────────────┐         ┌─────────────────┐         ┌─────────────────┐
-│ Cloudflare NAT  │         │ H3 Geo-Indexing │         │ ed25519-dalek   │
-│ (Quick Tunnel)  │         │ (~1km-10km Grid)│         │ (Identity Keys) │
+│  NAT Traversal  │         │ H3 Geo-Indexing │         │ ed25519-dalek   │
+│  (P2P Tunnel)   │         │ (~1km-10km Grid)│         │ (Identity Keys) │
 └─────────────────┘         └─────────────────┘         └─────────────────┘
 ```
 
@@ -108,7 +108,7 @@ Press `:` to focus the command input router at the bottom of the screen. The fol
 ### Star-Topology Feed Architecture (No Relay/Gossip)
 
 `murmur` uses a direct federated star-topology architecture for feed retrieval:
-- **Direct Fetching:** When you discover a peer in your H3 cells, your client fetches their posts directly from their local server endpoint (via their Cloudflare tunnel URL).
+- **Direct Fetching:** When you discover a peer in your H3 cells, your client fetches their posts directly from their local server endpoint (via their secure tunnel URL).
 - **Owner-Only Feeds:** The `/feed` endpoint on a peer's server only returns the posts authored by that specific peer. It does not relay or gossip posts from other peers.
 - **No Propagation:** Your local node does not serve, index, store, or forward other users' posts to third-party nodes. Communication is strictly peer-to-peer between the subscriber and the publisher.
 
