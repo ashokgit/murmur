@@ -42,6 +42,8 @@ pub mod serde_sig {
     }
 }
 
+pub const VIBES: &[&str] = &["✨", "🌊", "🔥", "💀", "🌿", "👁️", "🫧"];
+
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Post {
     pub id: Uuid,
@@ -451,6 +453,18 @@ impl Store {
         let now = chrono::Utc::now().timestamp();
         let mut rows = stmt.query(params![post_id, now]).await?;
         Ok(rows.next().await?.is_some())
+    }
+
+    pub async fn get_latest_post_location(&self, author_pk: &[u8; 32]) -> Result<Option<(f64, f64)>> {
+        let mut stmt = self.conn.prepare("SELECT lat_coarse, lon_coarse FROM posts WHERE author_pk = ? ORDER BY created_at DESC LIMIT 1").await?;
+        let mut rows = stmt.query(params![author_pk.to_vec()]).await?;
+        if let Some(row) = rows.next().await? {
+            let lat: f64 = row.get(0)?;
+            let lon: f64 = row.get(1)?;
+            Ok(Some((lat, lon)))
+        } else {
+            Ok(None)
+        }
     }
 }
 

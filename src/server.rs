@@ -56,8 +56,7 @@ async fn post_vibe(
         return Err("Post not found or expired".to_string());
     }
 
-    let allowed_vibes = ["✨", "🌊", "🔥", "💀", "🌿", "👁️", "👁", "🫧"];
-    if !allowed_vibes.contains(&payload.vibe_type.as_str()) {
+    if !crate::store::VIBES.contains(&payload.vibe_type.as_str()) && payload.vibe_type != "👁" {
         return Err("Invalid vibe type".to_string());
     }
 

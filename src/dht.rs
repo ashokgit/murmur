@@ -128,6 +128,10 @@ impl DhtNode {
         self.udp_port
     }
 
+    pub fn to_bootstrap(&self) -> Vec<String> {
+        self.dht.to_bootstrap()
+    }
+
     pub async fn announce_h3_cell(&self, cell_str: &str) -> Result<()> {
         let our_url = {
             let lock = self.url_state.lock().unwrap();
@@ -254,6 +258,20 @@ impl DhtNode {
 mod tests {
     use super::*;
     use crate::identity::load_or_create;
+
+    #[test]
+    fn test_to_bootstrap_behavior() {
+        let dht = mainline::Dht::builder()
+            .extra_bootstrap(&[
+                "router.bittorrent.com:6881",
+                "dht.transmissionbt.com:6881",
+            ])
+            .build()
+            .unwrap();
+        let nodes = dht.to_bootstrap();
+        println!("DHT nodes on start: {:?}", nodes);
+        assert!(nodes.is_empty(), "Initially the routing table should be empty, not containing hardcoded bootstrap nodes");
+    }
 
     #[test]
     fn test_peer_record_signing_and_verification() {

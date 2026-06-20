@@ -72,9 +72,21 @@ async fn main() -> anyhow::Result<()> {
         i += 1;
     }
 
+    let home = std::env::var("HOME")
+        .ok()
+        .map(std::path::PathBuf::from)
+        .or_else(|| std::env::var("USERPROFILE").ok().map(std::path::PathBuf::from));
+    let is_new_identity = if is_ephemeral {
+        true
+    } else if let Some(ref h) = home {
+        !h.join(".murmur").join("identity.key").exists()
+    } else {
+        true
+    };
+
     // 1. Identity loading
     let identity = identity::load_or_create(is_ephemeral)?;
-    tracing::info!("Loaded identity: @{}", identity.username);
+    tracing::info!("Loaded identity: @{}, new: {}", identity.username, is_new_identity);
 
     // 2. Database store
     let store = store::Store::init(is_ephemeral).await?;
@@ -208,6 +220,7 @@ async fn main() -> anyhow::Result<()> {
         dht_node,
         identity,
         sync_state,
+        is_new_identity,
     );
     app.run().await?;
 
