@@ -1,0 +1,5 @@
+/target
+*.log
+*.dmg
+.DS_Store
+packed.txt
