@@ -6,12 +6,9 @@ on:
       - 'v*'
 
 jobs:
-  release:
-    name: Build and Release macOS DMG
+  build-mac:
+    name: Build macOS DMG
     runs-on: macos-latest
-    permissions:
-      contents: write
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -24,10 +21,62 @@ jobs:
           chmod +x package_dmg.sh
           ./package_dmg.sh
 
-      - name: Create Release and Upload Asset
+      - name: Upload macOS Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-dmg
+          path: Murmur.dmg
+
+  build-windows:
+    name: Build Windows EXE
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Build Windows Binary
+        run: cargo build --release
+
+      - name: Prepare executable
+        shell: bash
+        run: |
+          mkdir dist
+          cp target/release/murmur.exe dist/murmur.exe
+
+      - name: Upload Windows Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-exe
+          path: dist/murmur.exe
+
+  publish:
+    name: Publish GitHub Release
+    needs: [build-mac, build-windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Move artifacts to release directory
+        run: |
+          mkdir release_files
+          cp artifacts/macos-dmg/Murmur.dmg release_files/
+          cp artifacts/windows-exe/murmur.exe release_files/
+
+      - name: Create Release and Upload Assets
         uses: softprops/action-gh-release@v2
         with:
-          files: Murmur.dmg
+          files: release_files/*
           draft: false
           prerelease: false
         env:
